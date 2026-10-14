@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Puzzle 3x3</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #dbeafe, #ede9fe);
+      color: #1e293b;
+      min-height: 100vh;
+      padding: 25px 15px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #4f46e5;
+      margin-bottom: 8px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 25px 15px;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px #64748b33;
+    }
+
+    .description {
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+
+    .upload {
+      display: inline-block;
+      padding: 12px 18px;
+      background: #ede9fe;
+      color: #5b21b6;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    #photoInput {
+      display: none;
+    }
+
+    #photoName {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 15px;
+      overflow-wrap: anywhere;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+
+    .stat {
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 12px 18px;
+      min-width: 95px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 22px;
+      color: #4f46e5;
+      margin-top: 5px;
+    }
+
+    #puzzle {
+      width: min(90vw, 390px);
+      aspect-ratio: 1;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 4px;
+      background: #cbd5e1;
+      padding: 4px;
+      border-radius: 12px;
+    }
+
+    .tile {
+      background-repeat: no-repeat;
+      border: 0;
+      border-radius: 5px;
+      cursor: pointer;
+      min-width: 0;
+      min-height: 0;
+      transition: transform 0.15s;
+    }
+
+    .tile:hover {
+      filter: brightness(1.08);
+    }
+
+    .tile:focus-visible {
+      outline: 3px solid #f59e0b;
+      outline-offset: -3px;
+    }
+
+    .tile.selected {
+      outline: 4px solid #f59e0b;
+      outline-offset: -4px;
+    }
+
+    .tile.empty {
+      background: #e2e8f0 !important;
+      cursor: default;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button.action {
+      border: none;
+      padding: 12px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    #shuffleBtn {
+      background: #4f46e5;
+      color: white;
+    }
+
+    #restartBtn {
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    #winMessage {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      background: #dcfce7;
+      color: #166534;
+      border-radius: 12px;
+      font-weight: bold;
+    }
+
+    .instructions {
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 12px;
+      text-align: left;
+      margin-top: 20px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #64748b;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>🧩 Puzzle Challenge</h1>
+    <p class="description">
+      Susun kembali potongan gambar hingga menjadi utuh!
+    </p>
+
+    <label class="upload" for="photoInput">
+      📷 Pilih Foto
+    </label>
+    <input type="file" id="photoInput" accept="image/*">
+
+    <div id="photoName">Belum ada foto yang dipilih</div>
+
+    <div class="stats">
+      <div class="stat">
+        Waktu
+        <strong id="timer">00:00</strong>
+      </div>
+      <div class="stat">
+        Langkah
+        <strong id="moves">0</strong>
+      </div>
+      <div class="stat">
+        Skor
+        <strong id="score">0</strong>
+      </div>
+    </div>
+
+    <div id="puzzle" aria-label="Papan puzzle 3 kali 3"></div>
+
+    <div class="buttons">
+      <button class="action" id="shuffleBtn">
+        🔀 Acak Puzzle
+      </button>
+      <button class="action" id="restartBtn">
+        ↻ Mulai Ulang
+      </button>
+    </div>
+
+    <div id="winMessage" role="status">
+      🎉 Hebat! Puzzle berhasil diselesaikan!
+      <p>Waktu: <span id="finalTime"></span></p>
+      <p>Langkah: <span id="finalMoves"></span></p>
+      <p>Skor akhir: <span id="finalScore"></span></p>
+      <button class="action" id="playAgainBtn">
+        Main Lagi
+      </button>
+    </div>
+
+    <div class="instructions">
+      <strong>📖 Cara bermain:</strong>
+      <ol>
+        <li>Pilih foto dari laptop kamu.</li>
+        <li>Klik tombol Acak Puzzle.</li>
+        <li>Klik satu potongan, lalu klik potongan di sebelahnya untuk menukar posisi.</li>
+        <li>Susun semua potongan hingga gambar kembali utuh.</li>
+        <li>Selesaikan puzzle untuk mendapatkan skor!</li>
+      </ol>
+    </div>
+
+    <footer>
+      Game Puzzle 3×3 | Dibuat untuk belajar pemrograman
+    </footer>
+  </main>
+
+  <script>
+    const puzzle = document.getElementById("puzzle");
+    const photoInput = document.getElementById("photoInput");
+    const photoName = document.getElementById("photoName");
+    const timerElement = document.getElementById("timer");
+    const movesElement = document.getElementById("moves");
+    const scoreElement = document.getElementById("score");
+    const shuffleBtn = document.getElementById("shuffleBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const winMessage = document.getElementById("winMessage");
+    const finalTime = document.getElementById("finalTime");
+    const finalMoves = document.getElementById("finalMoves");
+    const finalScore = document.getElementById("finalScore");
+    const playAgainBtn = document.getElementById("playAgainBtn");
+
+    const GRID_SIZE = 3;
+    const TOTAL_TILES = GRID_SIZE * GRID_SIZE;
+
+    let tiles = [];
+    let moves = 0;
+    let seconds = 0;
+    let timerInterval = null;
+    let gameStarted = false;
+    let selectedTile = null;
+    let selectedImage = null;
+
+    function formatTime(totalSeconds) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+
+      return String(minutes).padStart(2, "0") + ":" +
+             String(secs).padStart(2, "0");
+    }
+
+    function updateStats() {
+      timerElement.textContent = formatTime(seconds);
+      movesElement.textContent = moves;
+
+      const score = Math.max(
+        0,
+        1000 - moves * 10 - seconds * 2
+      );
+
+      scoreElement.textContent = score;
+    }
+
+    function startTimer() {
+      if (timerInterval !== null) return;
+
+      gameStarted = true;
+
+      timerInterval = setInterval(() => {
+        seconds++;
+        updateStats();
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    function resetStats() {
+      stopTimer();
+
+      moves = 0;
+      seconds = 0;
+      gameStarted = false;
+      selectedTile = null;
+
+      winMessage.style.display = "none";
+      updateStats();
+    }
+
+    function createSolvedTiles() {
+      tiles = Array.from(
+        { length: TOTAL_TILES },
+        (_, index) => index
+      );
+
+      tiles[TOTAL_TILES - 1] = -1;
+    }
+
+    function renderPuzzle() {
+      puzzle.innerHTML = "";
+
+      tiles.forEach((tile, index) => {
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "tile";
+        button.setAttribute(
+          "aria-label",
+          tile === -1
+            ? "Kotak kosong"
+            : "Potongan " + (tile + 1)
+        );
+
+        if (tile === -1) {
+          button.classList.add("empty");
+          button.disabled = true;
+        } else if (selectedImage) {
+          const row = Math.floor(tile / GRID_SIZE);
+          const col = tile % GRID_SIZE;
+
+          button.style.backgroundImage =
+            `url("${selectedImage}")`;
+
+          button.style.backgroundSize =
+            `${GRID_SIZE * 100}% ${GRID_SIZE * 100}%`;
+
+          button.style.backgroundPosition =
+            `${col * 50}% ${row * 50}%`;
+        } else {
+          button.style.backgroundColor =
+            ["#818cf8", "#a78bfa", "#c4b5fd",
+             "#60a5fa", "#38bdf8", "#67e8f9",
+             "#6ee7b7", "#86efac", "#fde68a"][tile];
+
+          button.textContent = tile + 1;
+          button.style.fontSize = "28px";
+          button.style.fontWeight = "bold";
+          button.style.color = "#1e293b";
+        }
+
+        if (selectedTile === index) {
+          button.classList.add("selected");
+        }
+
+        button.addEventListener("click", () => {
+          handleTileClick(index);
+        });
+
+        puzzle.appendChild(button);
+      });
+    }
+
+    function areAdjacent(index1, index2) {
+      const row1 = Math.floor(index1 / GRID_SIZE);
+      const col1 = index1 % GRID_SIZE;
+      const row2 = Math.floor(index2 / GRID_SIZE);
+      const col2 = index2 % GRID_SIZE;
+
+      return Math.abs(row1 - row2) +
+             Math.abs(col1 - col2) === 1;
+    }
+
+    function handleTileClick(index) {
+      if (winMessage.style.display === "block") return;
+      if (tiles[index] === -1) return;
+
+      if (selectedTile === null) {
+        selectedTile = index;
+        renderPuzzle();
+        return;
+      }
+
+      if (selectedTile === index) {
+        selectedTile = null;
+        renderPuzzle();
+        return;
+      }
+
+      if (areAdjacent(selectedTile, index)) {
+        startTimer();
+
+        [tiles[selectedTile], tiles[index]] =
+          [tiles[index], tiles[selectedTile]];
+
+        moves++;
+        selectedTile = null;
+
+        updateStats();
+        renderPuzzle();
+        checkWin();
+      } else {
+        selectedTile = index;
+        renderPuzzle();
+      }
+    }
+
+    function shufflePuzzle() {
+      resetStats();
+      createSolvedTiles();
+
+      let emptyIndex = TOTAL_TILES - 1;
+      let previousIndex = -1;
+
+      for (let i = 0; i < 150; i++) {
+        const row = Math.floor(emptyIndex / GRID_SIZE);
+        const col = emptyIndex % GRID_SIZE;
+        const neighbors = [];
+
+        if (row > 0) neighbors.push(emptyIndex - GRID_SIZE);
+        if (row < GRID_SIZE - 1) neighbors.push(emptyIndex + GRID_SIZE);
+        if (col > 0) neighbors.push(emptyIndex - 1);
+        if (col < GRID_SIZE - 1) neighbors.push(emptyIndex + 1);
+
+        const choices = neighbors.filter(
+          index => index !== previousIndex
+        );
+
+        const nextIndex =
+          choices[Math.floor(Math.random() * choices.length)];
+
+        [tiles[emptyIndex], tiles[nextIndex]] =
+          [tiles[nextIndex], tiles[emptyIndex]];
+
+        previousIndex = emptyIndex;
+        emptyIndex = nextIndex;
+      }
+
+      renderPuzzle();
+      updateStats();
+    }
+
+    function checkWin() {
+      const solved = tiles.every((tile, index) => {
+        if (index === TOTAL_TILES - 1) {
+          return tile === -1;
+        }
+
+        return tile === index;
+      });
+
+      if (solved) {
+        stopTimer();
+        gameStarted = false;
+
+        finalTime.textContent = formatTime(seconds);
+        finalMoves.textContent = moves;
+        finalScore.textContent = scoreElement.textContent;
+
+        winMessage.style.display = "block";
+      }
+    }
+
+    photoInput.addEventListener("change", event => {
+      const file = event.target.files[0];
+
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        alert("Silakan pilih file gambar.");
+        photoInput.value = "";
+        return;
+      }
+
+      if (selectedImage) {
+        URL.revokeObjectURL(selectedImage);
+      }
+
+      selectedImage = URL.createObjectURL(file);
+      photoName.textContent = file.name;
+
+      shufflePuzzle();
+    });
+
+    shuffleBtn.addEventListener("click", shufflePuzzle);
+
+    restartBtn.addEventListener("click", () => {
+      resetStats();
+      createSolvedTiles();
+      renderPuzzle();
+    });
+
+    playAgainBtn.addEventListener("click", shufflePuzzle);
+
+    createSolvedTiles();
+    renderPuzzle();
+    updateStats();
+</script>
+</body>
+</html>
