@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Game Puzzle 3x3</title>
+  <title>Puzzle Challenge 3x3</title>
 
   <style>
     * {
@@ -12,26 +12,26 @@
 
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #dbeafe, #ede9fe);
-      color: #1e293b;
-      min-height: 100vh;
       padding: 25px 15px;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
       text-align: center;
-    }
-
-    h1 {
-      color: #4f46e5;
-      margin-bottom: 8px;
+      color: #1e293b;
+      background: linear-gradient(135deg, #dbeafe, #ede9fe);
     }
 
     .container {
       max-width: 600px;
       margin: auto;
-      background: white;
       padding: 25px 15px;
+      background: white;
       border-radius: 20px;
       box-shadow: 0 8px 25px #64748b33;
+    }
+
+    h1 {
+      color: #4f46e5;
+      margin-bottom: 8px;
     }
 
     .description {
@@ -97,32 +97,23 @@
     }
 
     .tile {
-      background-repeat: no-repeat;
+      min-width: 0;
+      min-height: 0;
       border: 0;
       border-radius: 5px;
       cursor: pointer;
-      min-width: 0;
-      min-height: 0;
-      transition: transform 0.15s;
+      background-repeat: no-repeat;
+      transition: filter 0.15s;
     }
 
     .tile:hover {
-      filter: brightness(1.08);
-    }
-
-    .tile:focus-visible {
-      outline: 3px solid #f59e0b;
-      outline-offset: -3px;
+      filter: brightness(1.1);
     }
 
     .tile.selected {
       outline: 4px solid #f59e0b;
       outline-offset: -4px;
-    }
-
-    .tile.empty {
-      background: #e2e8f0 !important;
-      cursor: default;
+      filter: brightness(1.12);
     }
 
     .buttons {
@@ -182,13 +173,15 @@
 <body>
   <main class="container">
     <h1>🧩 Puzzle Challenge</h1>
+
     <p class="description">
-      Susun kembali potongan gambar hingga menjadi utuh!
+      Susun kembali 9 potongan gambar hingga menjadi utuh!
     </p>
 
     <label class="upload" for="photoInput">
       📷 Pilih Foto
     </label>
+
     <input type="file" id="photoInput" accept="image/*">
 
     <div id="photoName">Belum ada foto yang dipilih</div>
@@ -198,13 +191,15 @@
         Waktu
         <strong id="timer">00:00</strong>
       </div>
+
       <div class="stat">
         Langkah
         <strong id="moves">0</strong>
       </div>
+
       <div class="stat">
         Skor
-        <strong id="score">0</strong>
+        <strong id="score">1000</strong>
       </div>
     </div>
 
@@ -214,6 +209,7 @@
       <button class="action" id="shuffleBtn">
         🔀 Acak Puzzle
       </button>
+
       <button class="action" id="restartBtn">
         ↻ Mulai Ulang
       </button>
@@ -224,6 +220,7 @@
       <p>Waktu: <span id="finalTime"></span></p>
       <p>Langkah: <span id="finalMoves"></span></p>
       <p>Skor akhir: <span id="finalScore"></span></p>
+
       <button class="action" id="playAgainBtn">
         Main Lagi
       </button>
@@ -234,8 +231,9 @@
       <ol>
         <li>Pilih foto dari laptop kamu.</li>
         <li>Klik tombol Acak Puzzle.</li>
-        <li>Klik satu potongan, lalu klik potongan di sebelahnya untuk menukar posisi.</li>
-        <li>Susun semua potongan hingga gambar kembali utuh.</li>
+        <li>Klik satu potongan gambar.</li>
+        <li>Klik potongan lain untuk menukar posisinya.</li>
+        <li>Susun semua 9 potongan hingga gambar kembali utuh.</li>
         <li>Selesaikan puzzle untuk mendapatkan skor!</li>
       </ol>
     </div>
@@ -264,12 +262,14 @@
     const TOTAL_TILES = GRID_SIZE * GRID_SIZE;
 
     let tiles = [];
+    let selectedTile = null;
+    let selectedImage = null;
     let moves = 0;
     let seconds = 0;
     let timerInterval = null;
-    let gameStarted = false;
-    let selectedTile = null;
-    let selectedImage = null;
+    let gameFinished = false;
+    let hasStarted = false;
+    let imageUrl = null;
 
     function formatTime(totalSeconds) {
       const minutes = Math.floor(totalSeconds / 60);
@@ -292,9 +292,9 @@
     }
 
     function startTimer() {
-      if (timerInterval !== null) return;
+      if (timerInterval !== null || gameFinished) return;
 
-      gameStarted = true;
+      hasStarted = true;
 
       timerInterval = setInterval(() => {
         seconds++;
@@ -312,8 +312,9 @@
 
       moves = 0;
       seconds = 0;
-      gameStarted = false;
       selectedTile = null;
+      gameFinished = false;
+      hasStarted = false;
 
       winMessage.style.display = "none";
       updateStats();
@@ -324,8 +325,6 @@
         { length: TOTAL_TILES },
         (_, index) => index
       );
-
-      tiles[TOTAL_TILES - 1] = -1;
     }
 
     function renderPuzzle() {
@@ -338,15 +337,10 @@
         button.className = "tile";
         button.setAttribute(
           "aria-label",
-          tile === -1
-            ? "Kotak kosong"
-            : "Potongan " + (tile + 1)
+          "Potongan " + (tile + 1)
         );
 
-        if (tile === -1) {
-          button.classList.add("empty");
-          button.disabled = true;
-        } else if (selectedImage) {
+        if (selectedImage) {
           const row = Math.floor(tile / GRID_SIZE);
           const col = tile % GRID_SIZE;
 
@@ -359,11 +353,13 @@
           button.style.backgroundPosition =
             `${col * 50}% ${row * 50}%`;
         } else {
-          button.style.backgroundColor =
-            ["#818cf8", "#a78bfa", "#c4b5fd",
-             "#60a5fa", "#38bdf8", "#67e8f9",
-             "#6ee7b7", "#86efac", "#fde68a"][tile];
+          const colors = [
+            "#818cf8", "#a78bfa", "#c4b5fd",
+            "#60a5fa", "#38bdf8", "#67e8f9",
+            "#6ee7b7", "#86efac", "#fde68a"
+          ];
 
+          button.style.backgroundColor = colors[tile];
           button.textContent = tile + 1;
           button.style.fontSize = "28px";
           button.style.fontWeight = "bold";
@@ -382,79 +378,52 @@
       });
     }
 
-    function areAdjacent(index1, index2) {
-      const row1 = Math.floor(index1 / GRID_SIZE);
-      const col1 = index1 % GRID_SIZE;
-      const row2 = Math.floor(index2 / GRID_SIZE);
-      const col2 = index2 % GRID_SIZE;
-
-      return Math.abs(row1 - row2) +
-             Math.abs(col1 - col2) === 1;
-    }
-
     function handleTileClick(index) {
-      if (winMessage.style.display === "block") return;
-      if (tiles[index] === -1) return;
+      if (gameFinished) return;
 
+      // Pilih potongan pertama
       if (selectedTile === null) {
         selectedTile = index;
         renderPuzzle();
         return;
       }
 
+      // Klik potongan yang sama untuk membatalkan pilihan
       if (selectedTile === index) {
         selectedTile = null;
         renderPuzzle();
         return;
       }
 
-      if (areAdjacent(selectedTile, index)) {
-        startTimer();
+      // Mulai menghitung waktu saat potongan ditukar
+      startTimer();
 
-        [tiles[selectedTile], tiles[index]] =
-          [tiles[index], tiles[selectedTile]];
+      // Tukar posisi dua potongan
+      [tiles[selectedTile], tiles[index]] =
+        [tiles[index], tiles[selectedTile]];
 
-        moves++;
-        selectedTile = null;
+      moves++;
+      selectedTile = null;
 
-        updateStats();
-        renderPuzzle();
-        checkWin();
-      } else {
-        selectedTile = index;
-        renderPuzzle();
-      }
+      updateStats();
+      renderPuzzle();
+      checkWin();
     }
 
     function shufflePuzzle() {
       resetStats();
       createSolvedTiles();
 
-      let emptyIndex = TOTAL_TILES - 1;
-      let previousIndex = -1;
+      // Acak menggunakan Fisher-Yates
+      for (let i = tiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
 
-      for (let i = 0; i < 150; i++) {
-        const row = Math.floor(emptyIndex / GRID_SIZE);
-        const col = emptyIndex % GRID_SIZE;
-        const neighbors = [];
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+      }
 
-        if (row > 0) neighbors.push(emptyIndex - GRID_SIZE);
-        if (row < GRID_SIZE - 1) neighbors.push(emptyIndex + GRID_SIZE);
-        if (col > 0) neighbors.push(emptyIndex - 1);
-        if (col < GRID_SIZE - 1) neighbors.push(emptyIndex + 1);
-
-        const choices = neighbors.filter(
-          index => index !== previousIndex
-        );
-
-        const nextIndex =
-          choices[Math.floor(Math.random() * choices.length)];
-
-        [tiles[emptyIndex], tiles[nextIndex]] =
-          [tiles[nextIndex], tiles[emptyIndex]];
-
-        previousIndex = emptyIndex;
-        emptyIndex = nextIndex;
+      // Pastikan puzzle tidak langsung dalam keadaan menang
+      if (tiles.every((tile, index) => tile === index)) {
+        [tiles[0], tiles[1]] = [tiles[1], tiles[0]];
       }
 
       renderPuzzle();
@@ -462,17 +431,13 @@
     }
 
     function checkWin() {
-      const solved = tiles.every((tile, index) => {
-        if (index === TOTAL_TILES - 1) {
-          return tile === -1;
-        }
-
-        return tile === index;
-      });
+      const solved = tiles.every(
+        (tile, index) => tile === index
+      );
 
       if (solved) {
+        gameFinished = true;
         stopTimer();
-        gameStarted = false;
 
         finalTime.textContent = formatTime(seconds);
         finalMoves.textContent = moves;
@@ -493,11 +458,12 @@
         return;
       }
 
-      if (selectedImage) {
-        URL.revokeObjectURL(selectedImage);
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
       }
 
-      selectedImage = URL.createObjectURL(file);
+      imageUrl = URL.createObjectURL(file);
+      selectedImage = imageUrl;
       photoName.textContent = file.name;
 
       shufflePuzzle();
@@ -516,6 +482,6 @@
     createSolvedTiles();
     renderPuzzle();
     updateStats();
-</script>
+  </script>
 </body>
 </html>
